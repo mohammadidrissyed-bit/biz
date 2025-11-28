@@ -19,6 +19,37 @@ interface TopicViewProps {
   onBack: () => void;
 }
 
+// Helper function for robust clipboard copying
+function copyPromptToClipboard(promptText: string): void {
+  let copied = false;
+
+  try {
+    const textarea = document.createElement("textarea");
+    textarea.value = promptText;
+    textarea.setAttribute("readonly", "");
+    textarea.style.position = "fixed";
+    textarea.style.opacity = "0";
+    textarea.style.left = "-9999px";
+
+    document.body.appendChild(textarea);
+    textarea.focus();
+    textarea.select();
+
+    // Synchronous copy – important for mobile popup rules
+    copied = document.execCommand("copy");
+    document.body.removeChild(textarea);
+  } catch (err) {
+    copied = false;
+  }
+
+  // Modern async clipboard as best-effort (non-blocking, no await)
+  if (!copied && navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
+    navigator.clipboard.writeText(promptText).catch(() => {
+      // Fail silently; do not break UX
+    });
+  }
+}
+
 const TopicView: React.FC<TopicViewProps> = ({ topic, subject, classLevel, chapter, onBack }) => {
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [content, setContent] = useState<Record<Exclude<ViewMode, 'grid'>, any>>({ explanation: null, visualization: null, mindmap: null, quiz: null, key_concepts: null });
@@ -120,13 +151,29 @@ const TopicView: React.FC<TopicViewProps> = ({ topic, subject, classLevel, chapt
 
   const handleOpenGemini = (promptText: string) => {
     if (!promptText) return;
-    navigator.clipboard.writeText(promptText).then(() => {
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-    }).catch(err => console.error("Copy failed", err));
-    
-    const geminiUrl = `https://gemini.google.com/app?prompt=${encodeURIComponent(promptText)}`;
-    window.open(geminiUrl, '_blank', 'noopener,noreferrer');
+
+    // 1. FIRST: copy prompt synchronously (or best-effort)
+    copyPromptToClipboard(promptText);
+
+    // Update UI state
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+
+    const geminiUrl = "https://gemini.google.com/app";
+
+    // 2. THEN: try to open Gemini in a NEW TAB
+    let newWindow: Window | null = null;
+    try {
+      newWindow = window.open(geminiUrl, "_blank", "noopener,noreferrer");
+    } catch (error) {
+      // Ignore; we handle fallback below
+      console.error("Popup blocked or error opening window", error);
+    }
+
+    // 3. FALLBACK: if popup is blocked, navigate the current tab
+    if (!newWindow) {
+      window.location.href = geminiUrl;
+    }
   };
 
   const toggleReadAloud = async (text: string) => {
