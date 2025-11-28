@@ -60,7 +60,7 @@ const Homepage: React.FC<HomepageProps> = ({ onSelect }) => {
       
       <footer className="mt-12 py-6 border-t border-gray-200">
         <p className="text-sm text-text-secondary font-medium">
-          App developed by Haani, Aqsa, Mishkath, Soha, Madeeha under the guidance Miss Salma of Falcon Institute Mysore Road Branch, Bangalore
+          App developed by Haani, Aqsa, Mishkath, Soha, Madiha and Alaina under the guidance of Miss Salma of Falcon Institute Mysore Road Branch, Bangalore
         </p>
       </footer>
     </div>
